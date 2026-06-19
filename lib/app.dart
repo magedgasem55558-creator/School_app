@@ -48,7 +48,6 @@ class SchoolApp extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             elevation: 8,
-            // 🛠️ تم إزالة const من هنا لأن withOpacity دالة ديناميكية
             shadowColor: const Color(0xFF6A1B9A).withOpacity(0.4),
             backgroundColor: const Color(0xFF6A1B9A),
             foregroundColor: Colors.white,
@@ -64,7 +63,6 @@ class SchoolApp extends StatelessWidget {
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            // 🛠️ تم إزالة const من هنا أيضاً لنفس السبب
             borderSide: BorderSide(color: const Color(0xFF6A1B9A).withOpacity(0.3)),
           ),
           focusedBorder: OutlineInputBorder(
@@ -83,10 +81,11 @@ class SchoolApp extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
 
-        pageTransitionsTheme: const PageTransitionsTheme(
+        // 🛠️ تم إزالة الـ const الشاملة تماماً من هنا وتصحيح البنية لتنجح عملية البناء
+        pageTransitionsTheme: PageTransitionsTheme(
           builders: {
-            TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.android: const FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.iOS: const CupertinoPageTransitionsBuilder(),
           },
         ),
       ),
@@ -101,3 +100,4 @@ class SchoolApp extends StatelessWidget {
     );
   }
 }
+
