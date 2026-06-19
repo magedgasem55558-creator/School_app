@@ -67,7 +67,7 @@ class SchoolApp extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: const Color(0xFF6A1B9A), width: 2),
+            borderSide: const BorderSide(color: Color(0xFF6A1B9A), width: 2),
           ),
           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           prefixIconColor: const Color(0xFF6A1B9A),
@@ -81,8 +81,7 @@ class SchoolApp extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
 
-        // 🛠️ تم تعديل هذا الجزء ليعتمد حركات الـ Material المعرفة مسبقاً وتجنب خطأ التعريف
-        pageTransitionsTheme: PageTransitionsTheme(
+        pageTransitionsTheme: const PageTransitionsTheme(
           builders: {
             TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
             TargetPlatform.iOS: FadeUpwardsPageTransitionsBuilder(),
