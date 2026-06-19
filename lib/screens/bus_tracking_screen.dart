@@ -38,12 +38,10 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
   Future<void> _loadData() async {
     try {
       final driver = await _driverService.getDriverForStudent(widget.studentId);
-      // ✅ طباعة للتشخيص
       debugPrint('🔍 السائق المُسترجع: $driver');
 
       if (driver != null) {
         final points = await _driverService.getRecentLocations(driver['id']);
-        // ✅ طباعة عدد النقاط
         debugPrint('📍 عدد النقاط: ${points.length}');
 
         if (mounted) {
@@ -168,6 +166,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
                             urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                             userAgentPackageName: 'com.school.app',
                           ),
+                          // 🔵 خط المسار
                           if (_routePoints.length > 1)
                             PolylineLayer(
                               polylines: [
@@ -178,19 +177,68 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
                                 ),
                               ],
                             ),
+                          // 🟢 علامة الانطلاق + 🔴 علامة الوصول
                           if (_routePoints.isNotEmpty)
                             MarkerLayer(
                               markers: [
+                                // 🟢 نقطة الانطلاق
+                                Marker(
+                                  point: _routePoints.first,
+                                  width: 80,
+                                  height: 50,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.green.withOpacity(0.3),
+                                          border: Border.all(color: Colors.green, width: 2),
+                                        ),
+                                        child: const Icon(Icons.flag_circle, color: Colors.green, size: 28),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'انطلاق',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.green[700],
+                                          backgroundColor: Colors.white.withOpacity(0.8),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // 🔴 نقطة الوصول الحالية
                                 Marker(
                                   point: _routePoints.last,
-                                  width: 40,
-                                  height: 40,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.red.withOpacity(0.2),
-                                    ),
-                                    child: const Icon(Icons.location_on, color: Colors.red, size: 30),
+                                  width: 80,
+                                  height: 50,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.red.withOpacity(0.3),
+                                          border: Border.all(color: Colors.red, width: 2),
+                                        ),
+                                        child: const Icon(Icons.location_on, color: Colors.red, size: 28),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'الآن',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.red[700],
+                                          backgroundColor: Colors.white.withOpacity(0.8),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
