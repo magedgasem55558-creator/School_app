@@ -81,11 +81,11 @@ class SchoolApp extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
 
-        // 🛠️ تم إزالة الـ const الشاملة تماماً من هنا وتصحيح البنية لتنجح عملية البناء
+        // 🛠️ تم تنظيف هذا الجزء تماماً وحذف أي const داخلية وخارجية منه
         pageTransitionsTheme: PageTransitionsTheme(
           builders: {
-            TargetPlatform.android: const FadeUpwardsPageTransitionsBuilder(),
-            TargetPlatform.iOS: const CupertinoPageTransitionsBuilder(),
+            TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
           },
         ),
       ),
