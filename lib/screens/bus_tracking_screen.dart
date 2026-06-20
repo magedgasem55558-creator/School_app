@@ -22,21 +22,22 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
 
   static const LatLng _attaqCenter = LatLng(14.5376, 46.8319); // عتق
 
-  // حالة الرحلة
-  String _tripStatus = 'active'; // 'active', 'recently_ended', 'ended'
-  String? _lastPointTime;
+  String _tripStatus = 'active';
+  MapController? _mapController;
 
   @override
   void initState() {
     super.initState();
+    _mapController = MapController();
     _loadData();
-    // ⏱️ تحديث كل 3 ثوانٍ ليتوافق مع مدة إرسال الإحداثيات
-    _refreshTimer = Timer.periodic(const Duration(seconds: 3), (_) => _loadData());
+    // ⏱️ تحديث كل ثانية
+    _refreshTimer = Timer.periodic(const Duration(seconds: 1), (_) => _loadData());
   }
 
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    _mapController?.dispose();
     super.dispose();
   }
 
@@ -45,7 +46,6 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
       final driver = await _driverService.getDriverForStudent(widget.studentId);
 
       if (driver != null) {
-        // جلب كل الإحداثيات خلال آخر ساعة
         final points = await _driverService.getRecentLocations(driver['id']);
 
         if (mounted) {
@@ -54,24 +54,13 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
             (p['longitude'] as num).toDouble(),
           )).toList();
 
-          // تجميع نقاط الرحلة الحالية فقط
           final List<LatLng> currentTripPoints = _getCurrentTripPoints(allPoints, points);
 
-          // تحديد حالة الرحلة بناءً على آخر نقطة
           String status = 'active';
           if (points.isNotEmpty) {
             final lastTimestamp = DateTime.parse(points.last['timestamp']);
             final diffInSeconds = DateTime.now().difference(lastTimestamp).inSeconds;
-            
-            if (diffInSeconds > 60) {
-              // مر أكثر من دقيقة على آخر نقطة → الرحلة منتهية
-              status = 'recently_ended';
-            } else {
-              // أقل من دقيقة → الرحلة نشطة
-              status = 'active';
-            }
-            
-            _lastPointTime = '${diffInSeconds ~/ 60}:${(diffInSeconds % 60).toString().padLeft(2, '0')}';
+            status = diffInSeconds > 60 ? 'recently_ended' : 'active';
           } else {
             status = 'no_data';
           }
@@ -82,6 +71,11 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
             _tripStatus = status;
             _isLoading = false;
           });
+
+          // تحريك الخريطة تلقائياً لآخر نقطة
+          if (_routePoints.isNotEmpty && _tripStatus == 'active') {
+            _mapController?.move(_routePoints.last, 18);
+          }
         }
       } else {
         if (mounted) {
@@ -94,17 +88,14 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
-      debugPrint('❌ خطأ جلب المسار: $e');
     }
   }
 
-  /// إرجاع نقاط الرحلة الحالية فقط (متجاورة زمنياً)
   List<LatLng> _getCurrentTripPoints(
     List<LatLng> allPoints,
     List<Map<String, dynamic>> rawPoints,
   ) {
     if (allPoints.isEmpty) return [];
-
     List<LatLng> trip = [];
     for (int i = allPoints.length - 1; i >= 0; i--) {
       if (trip.isEmpty) {
@@ -113,12 +104,9 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
         final current = DateTime.parse(rawPoints[i]['timestamp']);
         final previous = DateTime.parse(rawPoints[i + 1]['timestamp']);
         final gap = previous.difference(current).inSeconds.abs();
-
         if (gap <= 60) {
-          // فجوة أقل من دقيقة → نفس الرحلة
           trip.insert(0, allPoints[i]);
         } else {
-          // فجوة كبيرة → رحلة جديدة
           break;
         }
       }
@@ -132,11 +120,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
       appBar: AppBar(
         title: Text('مسار ${widget.studentName}'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadData,
-            tooltip: 'تحديث المسار',
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadData),
         ],
       ),
       body: _isLoading
@@ -150,9 +134,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
                         children: [
                           const Icon(Icons.map, size: 64, color: Colors.grey),
                           const SizedBox(height: 16),
-                          const Text('لا توجد إحداثيات مسجلة بعد', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                          const SizedBox(height: 8),
-                          const Text('بانتظار بدء الرحلة...', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                          const Text('لا توجد إحداثيات مسجلة بعد', style: TextStyle(fontSize: 16)),
                         ],
                       ),
                     )
@@ -163,16 +145,19 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
                           child: Stack(
                             children: [
                               FlutterMap(
+                                mapController: _mapController!,
                                 options: MapOptions(
-                                  initialCenter: _routePoints.isNotEmpty
-                                      ? _routePoints.last
-                                      : _attaqCenter,
-                                  initialZoom: 15,
+                                  initialCenter: _routePoints.isNotEmpty ? _routePoints.last : _attaqCenter,
+                                  initialZoom: 18, // 🔍 تكبير عالي للتفاصيل
+                                  minZoom: 5,
+                                  maxZoom: 19,
                                 ),
                                 children: [
+                                  // 🗺️ طبقة الخريطة عالية الدقة
                                   TileLayer(
-                                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                    urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
                                     userAgentPackageName: 'com.school.app',
+                                    // يمكن استخدام مزود خرائط تجاري عالي الدقة مثل Mapbox أو Google Maps
                                   ),
                                   // 🔵 خط المسار
                                   if (_routePoints.length > 1)
@@ -180,23 +165,21 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
                                       polylines: [
                                         Polyline(
                                           points: _routePoints,
-                                          strokeWidth: 5,
-                                          color: Colors.indigo,
+                                          strokeWidth: 6,
+                                          color: Colors.blue[800]!,
+                                          borderStrokeWidth: 2,
+                                          borderColor: Colors.white,
                                         ),
                                       ],
                                     ),
-                                  // علامات البداية والنهاية
+                                  // علامات
                                   if (_routePoints.isNotEmpty)
-                                    MarkerLayer(
-                                      markers: _buildMarkers(),
-                                    ),
+                                    MarkerLayer(markers: _buildMarkers()),
                                 ],
                               ),
                               // بطاقة الحالة
                               Positioned(
-                                top: 10,
-                                left: 10,
-                                right: 10,
+                                top: 10, left: 10, right: 10,
                                 child: _buildTripStatusCard(),
                               ),
                             ],
@@ -213,13 +196,9 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
       children: [
         const Icon(Icons.person_off, size: 64, color: Colors.grey),
         const SizedBox(height: 16),
-        const Text('لا يوجد سائق مرتبط بهذا الطالب', style: TextStyle(fontSize: 16, color: Colors.grey)),
+        const Text('لا يوجد سائق مرتبط', style: TextStyle(fontSize: 16)),
         const SizedBox(height: 20),
-        ElevatedButton.icon(
-          onPressed: _loadData,
-          icon: const Icon(Icons.refresh),
-          label: const Text('إعادة المحاولة'),
-        ),
+        ElevatedButton.icon(onPressed: _loadData, icon: const Icon(Icons.refresh), label: const Text('إعادة المحاولة')),
       ],
     );
   }
@@ -228,9 +207,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.indigo.withOpacity(0.2), Colors.indigo.withOpacity(0.05)],
-        ),
+        gradient: LinearGradient(colors: [Colors.indigo.withOpacity(0.2), Colors.indigo.withOpacity(0.05)]),
       ),
       child: Row(
         children: [
@@ -245,7 +222,6 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(_driver!['name'] ?? '', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
                 Text('لوحة: ${_driver!['plate_number'] ?? 'غير محدد'}'),
                 Text('نوع: ${_driver!['vehicle_type'] ?? 'غير محدد'}'),
               ],
@@ -258,26 +234,20 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
 
   Widget _buildTripStatusCard() {
     Color bgColor;
-    IconData icon;
     String text;
-
     switch (_tripStatus) {
       case 'active':
-        bgColor = Colors.orange.withOpacity(0.9);
-        icon = Icons.directions_bus;
+        bgColor = Colors.green.withOpacity(0.9);
         text = '🚌 الرحلة نشطة الآن';
         break;
       case 'recently_ended':
         bgColor = Colors.red.withOpacity(0.9);
-        icon = Icons.flag_circle;
         text = '🏁 انتهت الرحلة';
         break;
       default:
         bgColor = Colors.grey.withOpacity(0.9);
-        icon = Icons.info;
-        text = 'في الانتظار...';
+        text = '⏳ في الانتظار';
     }
-
     return Card(
       color: bgColor,
       child: Padding(
@@ -285,12 +255,9 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: Colors.white, size: 20),
+            const Icon(Icons.info, color: Colors.white, size: 20),
             const SizedBox(width: 8),
-            Text(
-              text,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-            ),
+            Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
           ],
         ),
       ),
@@ -299,98 +266,63 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
 
   List<Marker> _buildMarkers() {
     final markers = <Marker>[];
-    
     if (_routePoints.length >= 2) {
-      // 🟢 نقطة البداية (دائماً)
-      markers.add(
-        Marker(
-          point: _routePoints.first,
-          width: 80,
-          height: 55,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.green.withOpacity(0.3),
-                  border: Border.all(color: Colors.green, width: 2),
-                ),
-                child: const Icon(Icons.flag_circle, color: Colors.green, size: 28),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'انطلاق',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green[700], backgroundColor: Colors.white.withOpacity(0.8)),
-              ),
-            ],
-          ),
+      // 🟢 بداية
+      markers.add(Marker(
+        point: _routePoints.first,
+        width: 80, height: 55,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.green.withOpacity(0.3), border: Border.all(color: Colors.green, width: 2)),
+              child: const Icon(Icons.flag_circle, color: Colors.green, size: 28),
+            ),
+            const SizedBox(height: 2),
+            Text('انطلاق', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green[700], backgroundColor: Colors.white.withOpacity(0.8))),
+          ],
         ),
-      );
-
-      // 🔴 نقطة النهاية (إذا انتهت) أو 🟠 الموقع الحي (إذا نشطة)
+      ));
+      // 🟠/🔴 نهاية
       final isActive = _tripStatus == 'active';
       final endColor = isActive ? Colors.orange : Colors.red;
       final endIcon = isActive ? Icons.directions_bus : Icons.flag_circle;
       final endLabel = isActive ? 'الآن' : 'النهاية';
-
-      markers.add(
-        Marker(
-          point: _routePoints.last,
-          width: 80,
-          height: 55,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: endColor.withOpacity(0.3),
-                  border: Border.all(color: endColor, width: 2),
-                ),
-                child: Icon(endIcon, color: endColor, size: 28),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                endLabel,
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: endColor[700], backgroundColor: Colors.white.withOpacity(0.8)),
-              ),
-            ],
-          ),
+      markers.add(Marker(
+        point: _routePoints.last,
+        width: 80, height: 55,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(shape: BoxShape.circle, color: endColor.withOpacity(0.3), border: Border.all(color: endColor, width: 2)),
+              child: Icon(endIcon, color: endColor, size: 28),
+            ),
+            const SizedBox(height: 2),
+            Text(endLabel, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: endColor[700], backgroundColor: Colors.white.withOpacity(0.8))),
+          ],
         ),
-      );
+      ));
     } else if (_routePoints.length == 1) {
-      // نقطة واحدة فقط
-      markers.add(
-        Marker(
-          point: _routePoints.first,
-          width: 80,
-          height: 55,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.orange.withOpacity(0.3),
-                  border: Border.all(color: Colors.orange, width: 2),
-                ),
-                child: const Icon(Icons.location_on, color: Colors.orange, size: 28),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'الآن',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.orange[700], backgroundColor: Colors.white.withOpacity(0.8)),
-              ),
-            ],
-          ),
+      markers.add(Marker(
+        point: _routePoints.first,
+        width: 80, height: 55,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.orange.withOpacity(0.3), border: Border.all(color: Colors.orange, width: 2)),
+              child: const Icon(Icons.location_on, color: Colors.orange, size: 28),
+            ),
+            const SizedBox(height: 2),
+            Text('الآن', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.orange[700], backgroundColor: Colors.white.withOpacity(0.8))),
+          ],
         ),
-      );
+      ));
     }
-
     return markers;
   }
 }
