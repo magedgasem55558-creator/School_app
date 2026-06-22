@@ -1,9 +1,9 @@
-import 'dart:async';
+limport 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../services/driver_service.dart';
-import '../theme.dart'; // استيراد AppTheme
+import '../theme.dart';
 
 class BusTrackingScreen extends StatefulWidget {
   final String studentId;
@@ -118,19 +118,19 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppTheme.primaryColor,
-        title: Text('مسار ${widget.studentName}', style: const TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: AppTheme.surface,
+        title: Text('مسار ${widget.studentName}', style: const TextStyle(color: AppTheme.textPrimary)),
+        iconTheme: const IconThemeData(color: AppTheme.textPrimary),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
+            icon: const Icon(Icons.refresh, color: AppTheme.textPrimary),
             onPressed: _loadData,
             tooltip: 'تحديث المسار',
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor))
+          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
           : _driver == null
               ? Center(child: _buildNoDriver())
               : _routePoints.isEmpty
@@ -175,7 +175,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
                                         Polyline(
                                           points: _routePoints,
                                           strokeWidth: 6,
-                                          color: AppTheme.primaryColor,
+                                          color: AppTheme.primary,
                                           borderStrokeWidth: 2,
                                           borderColor: Colors.white,
                                         ),
@@ -210,7 +210,6 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
           onPressed: _loadData,
           icon: const Icon(Icons.refresh),
           label: const Text('إعادة المحاولة'),
-          style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
         ),
       ],
     );
@@ -220,7 +219,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface,
         border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
       ),
       child: Row(
@@ -229,9 +228,9 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: AppTheme.primary.withOpacity(0.1),
             ),
-            child: const Icon(Icons.person, size: 36, color: AppTheme.primaryColor),
+            child: const Icon(Icons.person, size: 36, color: AppTheme.primary),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -356,14 +355,14 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppTheme.primaryColor.withOpacity(0.3),
-                border: Border.all(color: AppTheme.primaryColor, width: 2),
+                color: AppTheme.primary.withOpacity(0.3),
+                border: Border.all(color: AppTheme.primary, width: 2),
               ),
-              child: const Icon(Icons.location_on, color: AppTheme.primaryColor, size: 28),
+              child: const Icon(Icons.location_on, color: AppTheme.primary, size: 28),
             ),
             const SizedBox(height: 2),
             Text('الآن', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
-                color: AppTheme.primaryColor, backgroundColor: Colors.white.withOpacity(0.8))),
+                color: AppTheme.primary, backgroundColor: Colors.white.withOpacity(0.8))),
           ],
         ),
       ));
