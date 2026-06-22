@@ -1,0 +1,27 @@
+name: school_app
+description: "تطبيق المدرسة النموذجية لأولياء الأمور"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.7
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  supabase_flutter: ^2.0.0
+  intl: ^0.18.1
+  http: ^1.1.0
+  fl_chart: ^0.66.0
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
+  google_fonts: ^6.1.0        # ← أضف هذا السطر لاستخدام خط Cairo
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
