@@ -7,8 +7,6 @@ import 'all_grades_table_screen.dart';
 import 'attendance_screen.dart';
 import 'statistics_screen.dart';
 import 'bus_tracking_screen.dart';
-import 'timetable_screen.dart';
-import 'news_screen.dart';          // ✅ استيراد شاشة الأخبار
 import 'about_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -170,31 +168,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             );
                           }
-                        },
-                      ),
-                      _buildCard(
-                        icon: Icons.table_chart_outlined,
-                        title: 'الجداول الدراسية',
-                        onTap: () {
-                          if (selectedChild != null) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => TimetableScreen(child: selectedChild!),
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                      // ✨ بطاقة الأخبار والإعلانات الجديدة
-                      _buildCard(
-                        icon: Icons.campaign_rounded,
-                        title: 'الأخبار والإعلانات',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const NewsScreen()),
-                          );
                         },
                       ),
                     ],
