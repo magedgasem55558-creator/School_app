@@ -7,6 +7,8 @@ import 'all_grades_table_screen.dart';
 import 'attendance_screen.dart';
 import 'statistics_screen.dart';
 import 'bus_tracking_screen.dart';
+import 'timetable_screen.dart';       // ✅ الجداول الدراسية
+import 'news_screen.dart';            // ✅ الأخبار والإعلانات
 import 'about_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -170,6 +172,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           }
                         },
                       ),
+                      // ✨ الجداول الدراسية
+                      _buildCard(
+                        icon: Icons.table_chart_outlined,
+                        title: 'الجداول الدراسية',
+                        onTap: () {
+                          if (selectedChild != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => TimetableScreen(child: selectedChild!),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                      // ✨ الأخبار والإعلانات
+                      _buildCard(
+                        icon: Icons.campaign_rounded,
+                        title: 'الأخبار والإعلانات',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const NewsScreen()),
+                          );
+                        },
+                      ),
+                      // ✨ عن المدرسة
+                      _buildCard(
+                        icon: Icons.info_outline_rounded,
+                        title: 'عن المدرسة',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const AboutScreen()),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -229,8 +268,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 future: _fetchFinancialData(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                        child: CircularProgressIndicator());
+                    return const Center(child: CircularProgressIndicator());
                   }
                   final data = snapshot.data ?? {};
                   return Column(
@@ -239,14 +277,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       _financialRow('الزي المدرسي', data['uniform_fees'] ?? 0),
                       _financialRow('الباص', data['bus_fees'] ?? 0),
                       const Divider(height: 24),
-                      _financialRow('الإجمالي', data['total_amount'] ?? 0,
-                          bold: true),
-                      _financialRow('المدفوع', data['paid_amount'] ?? 0,
-                          color: AppTheme.success),
+                      _financialRow('الإجمالي', data['total_amount'] ?? 0, bold: true),
+                      _financialRow('المدفوع', data['paid_amount'] ?? 0, color: AppTheme.success),
                       _financialRow(
                           'المتبقي',
-                          (data['total_amount'] ?? 0) -
-                              (data['paid_amount'] ?? 0),
+                          (data['total_amount'] ?? 0) - (data['paid_amount'] ?? 0),
                           color: AppTheme.error),
                     ],
                   );
@@ -268,12 +303,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (selectedChild == null) return {};
     String? classId = selectedChild!.classId;
     if (classId == null) {
-      final classData =
-          await _parentService.getClassByName(selectedChild!.level);
+      final classData = await _parentService.getClassByName(selectedChild!.level);
       classId = classData?['id'];
     }
-    final classData =
-        classId != null ? await _parentService.getClassDataSafe(classId) : {};
+    final classData = classId != null ? await _parentService.getClassDataSafe(classId) : {};
     final schoolFees = classData['school_fees'] ?? 0;
     final uniformFees = classData['uniform_fees'] ?? 0;
     final busFees = classData['bus_fees'] ?? 0;
@@ -286,8 +319,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     };
   }
 
-  Widget _financialRow(String label, dynamic value,
-      {bool bold = false, Color? color}) {
+  Widget _financialRow(String label, dynamic value, {bool bold = false, Color? color}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
