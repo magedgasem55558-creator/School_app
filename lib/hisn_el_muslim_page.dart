@@ -60,7 +60,7 @@ class AzkarData {
     {
       'title': 'أدعية قرآنيّة',
       'icon': Icons.menu_book_rounded,
-      'color': Colors.emerald,
+      'color': Colors.teal, // تم التعديل من emerald إلى teal
       'items': [
         {'text': 'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ.', 'count': 1},
         {'text': 'رَبِّ اشْرَحْ لِي صَدْرِي وَيَسِّرْ لِي أَمْرِي.', 'count': 1},
