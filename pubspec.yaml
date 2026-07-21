@@ -19,6 +19,11 @@ dependencies:
   latlong2: ^0.9.0
   dio: ^5.4.0
 
+  # --- حزم قسم القبلة والموقع ---
+  geolocator: ^10.1.0
+  flutter_compass: ^0.8.0
+  permission_handler: ^11.3.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
