@@ -182,7 +182,7 @@ class _HadithSearchPageState extends State<HadithSearchPage> {
   }
 }
 
-// ويدجت مستقلا لإدارة حالة التوسيع للحديث الطويل بدعم زر "عرض المزيد / عرض أقل"
+// ويدجت مستقل لإدارة حالة التوسيع للحديث الطويل بدعم زر "عرض المزيد / عرض أقل"
 class HadithCardItem extends StatefulWidget {
   final String hadithText;
   final String grade;
@@ -223,7 +223,7 @@ class _HadithCardItemState extends State<HadithCardItem> {
       child: Padding(
         padding: const EdgeInsets.all(14.0),
         child: Column(
-          crossAxisAlignment: CrossAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // نص الحديث التفاعلي
             AnimatedSize(
