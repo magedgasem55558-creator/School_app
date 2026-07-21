@@ -4,6 +4,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:school_app/hadith_search_page.dart';
+import 'package:school_app/hisn_el_muslim_page.dart'; // تم استيراد صفحة حصن المسلم
 
 class Reciter {
   final String id;
@@ -227,6 +228,17 @@ class _YasserDossariQuranPageState extends State<YasserDossariQuranPage> {
         centerTitle: true,
         backgroundColor: Colors.teal,
         actions: [
+          // زر الانتقال إلى حصن المسلم
+          IconButton(
+            icon: const Icon(Icons.shield_outlined),
+            tooltip: 'حصن المسلم',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const HisnElMuslimPage()),
+              );
+            },
+          ),
           // زر الانتقال إلى صفحة التحقق من صحة الحديث
           IconButton(
             icon: const Icon(Icons.menu_book_rounded),
