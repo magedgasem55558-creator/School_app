@@ -47,70 +47,84 @@ class _HadithSearchPageState extends State<HadithSearchPage> {
     });
 
     try {
-      // 1. تجربة API الدرر السنية الرئيسي بطلب مع رأسية User-Agent
+      // 1. تجربة API الدرر السنية المباشر والمستقر
+      final encodedQuery = Uri.encodeComponent(query.trim());
       final url = Uri.parse(
-        'https://dorar-hadith-api.almts.mobi/api/hadith/search?value=${Uri.encodeComponent(query)}',
+        'https://dorar-hadith-api.herokuapp.com/api/hadith/search?value=$encodedQuery',
       );
 
       final response = await http.get(
         url,
         headers: {
+          'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36',
         },
-      ).timeout(const Duration(seconds: 12));
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        final decodedData = json.decode(response.body);
+        // التأكد من أن النتيجة بصيغة JSON وليست صفحة HTML
+        if (response.body.startsWith('{') || response.body.startsWith('[')) {
+          final decodedData = json.decode(response.body);
 
-        List<dynamic> results = [];
-        if (decodedData is Map<String, dynamic>) {
-          if (decodedData['data'] is List) {
-            results = decodedData['data'];
-          } else if (decodedData['results'] is List) {
-            results = decodedData['results'];
+          List<dynamic> results = [];
+          if (decodedData is List) {
+            results = decodedData;
+          } else if (decodedData is Map<String, dynamic>) {
+            results = decodedData['data'] ?? decodedData['results'] ?? [];
           }
-        } else if (decodedData is List) {
-          results = decodedData;
-        }
 
-        if (results.isEmpty) {
-          setState(() {
-            _errorMessage = 'لم يتم العثور على أحاديث تطابق كلمة البحث';
-            _isLoading = false;
-          });
+          if (results.isEmpty) {
+            setState(() {
+              _errorMessage = 'لم يتم العثور على أحاديث تطابق كلمة البحث';
+              _isLoading = false;
+            });
+          } else {
+            setState(() {
+              _searchResults = results;
+              _isLoading = false;
+            });
+          }
         } else {
-          setState(() {
-            _searchResults = results;
-            _isLoading = false;
-          });
+          await _fetchFromSecondaryApi(query);
         }
       } else {
-        // تجربة خادم احتياطي إذا فشل الأول
         await _fetchFromSecondaryApi(query);
       }
     } catch (e) {
-      // في حال وجود مشكلة شبكة أو مهلة زمنية ننتقل للخادم الاحتياطي
       await _fetchFromSecondaryApi(query);
     }
   }
 
-  // خادم احتياطي موثوق للأحاديث
+  // خادم احتياطي في حال تعثر الأول
   Future<void> _fetchFromSecondaryApi(String query) async {
     try {
+      final encodedQuery = Uri.encodeComponent(query.trim());
       final fallbackUrl = Uri.parse(
-        'https://hadith-api-1.vercel.app/api/hadiths?search=${Uri.encodeComponent(query)}',
+        'https://dorar-hadith-api.almts.mobi/api/hadith/search?value=$encodedQuery',
       );
 
-      final response = await http.get(fallbackUrl).timeout(const Duration(seconds: 10));
+      final response = await http.get(
+        fallbackUrl,
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0',
+        },
+      ).timeout(const Duration(seconds: 10));
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && (response.body.startsWith('{') || response.body.startsWith('['))) {
         final data = json.decode(response.body);
-        List<dynamic> results = data['data'] ?? data['hadiths'] ?? [];
+        List<dynamic> results = [];
+
+        if (data is Map<String, dynamic>) {
+          results = data['data'] ?? [];
+        } else if (data is List) {
+          results = data;
+        }
 
         if (results.isEmpty) {
           setState(() {
-            _errorMessage = 'لم يتم العثور على نتائج للبحث';
+            _errorMessage = 'لم يتم العثور على نتائج للبحث، جرب كلمات أخرى من الحديث';
             _isLoading = false;
           });
         } else {
@@ -121,13 +135,13 @@ class _HadithSearchPageState extends State<HadithSearchPage> {
         }
       } else {
         setState(() {
-          _errorMessage = 'تعذر الاتصال بالخدمة حالياً، يرجى المحاولة لاحقاً';
+          _errorMessage = 'سيرفر البحث متوقف حالياً، يرجى المحاولة لاحقاً';
           _isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'يرجى التأكد من اتصالك بالإنترنت والمحاولة مجدداً';
+        _errorMessage = 'تعذر الاتصال بالشبكة، تأكد من اتصال جهازك بالإنترنت';
         _isLoading = false;
       });
     }
