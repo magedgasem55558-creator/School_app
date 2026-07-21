@@ -12,32 +12,15 @@ class HadithSearchPage extends StatefulWidget {
 
 class _HadithSearchPageState extends State<HadithSearchPage> {
   final TextEditingController _searchController = TextEditingController();
-  List<dynamic> _searchResults = [];
+  List<Map<String, String>> _searchResults = [];
   bool _isLoading = false;
   String _errorMessage = '';
 
-  // دالة تنظيف النصوص من أوسمة HTML والرموز
-  String _cleanText(String rawText) {
-    if (rawText.isEmpty) return '';
-
-    String text = rawText;
-    text = text.replaceAll(RegExp(r'<[^>]*>'), '');
-    text = text.replaceAll(RegExp(r'[\(\[\<]\d+[\)\]\>]'), '');
-    text = text.replaceAll('الموسوعة الحديثية', '');
-    text = text.replaceAll('الموقع الرسمي للموسوعة الحديثية', '');
-    text = text
-        .replaceAll('&nbsp;', ' ')
-        .replaceAll('&quot;', '"')
-        .replaceAll('&#39;', "'")
-        .replaceAll('&gt;', '>')
-        .replaceAll('&lt;', '<');
-
-    return text.trim();
-  }
-
   Future<void> _searchHadith(String query) async {
-    if (query.trim().isEmpty) return;
+    final cleanQuery = query.trim();
+    if (cleanQuery.isEmpty) return;
 
+    // إخفاء لوحة المفاتيح عند بدء البحث
     FocusScope.of(context).unfocus();
 
     setState(() {
@@ -47,104 +30,119 @@ class _HadithSearchPageState extends State<HadithSearchPage> {
     });
 
     try {
-      // 1. تجربة API الدرر السنية المباشر والمستقر
-      final encodedQuery = Uri.encodeComponent(query.trim());
+      // 1. الاتصال المباشر مع API الدرر السنية الرسمي
       final url = Uri.parse(
-        'https://dorar-hadith-api.herokuapp.com/api/hadith/search?value=$encodedQuery',
+        'https://dorar-hadith-api.dorar.net/api/hadith/search?value=${Uri.encodeComponent(cleanQuery)}',
       );
-
-      final response = await http.get(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36',
-        },
-      ).timeout(const Duration(seconds: 10));
+      final response = await http.get(url).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        // التأكد من أن النتيجة بصيغة JSON وليست صفحة HTML
-        if (response.body.startsWith('{') || response.body.startsWith('[')) {
-          final decodedData = json.decode(response.body);
+        final data = json.decode(response.body);
+        final List<dynamic> items = data['ahadith'] ?? data['data'] ?? [];
 
-          List<dynamic> results = [];
-          if (decodedData is List) {
-            results = decodedData;
-          } else if (decodedData is Map<String, dynamic>) {
-            results = decodedData['data'] ?? decodedData['results'] ?? [];
-          }
-
-          if (results.isEmpty) {
-            setState(() {
-              _errorMessage = 'لم يتم العثور على أحاديث تطابق كلمة البحث';
-              _isLoading = false;
-            });
-          } else {
-            setState(() {
-              _searchResults = results;
-              _isLoading = false;
-            });
-          }
-        } else {
-          await _fetchFromSecondaryApi(query);
+        if (items.isEmpty) {
+          setState(() {
+            _errorMessage = 'لم يتم العثور على أحاديث تطابق كلمة البحث.';
+            _isLoading = false;
+          });
+          return;
         }
+
+        List<Map<String, String>> parsedResults = items.map((item) {
+          return {
+            'hadith': _cleanHtml(item['hadith'] ?? item['text'] ?? ''),
+            'grade': _cleanHtml(item['grade'] ?? item['degree'] ?? 'غير محدد'),
+            'rawi': _cleanHtml(item['rawi'] ?? item['el_rawi'] ?? 'غير معروف'),
+            'muhaddith': _cleanHtml(item['muhaddith'] ?? item['el_mohdith'] ?? 'غير معروف'),
+            'source': _cleanHtml(item['source'] ?? item['book'] ?? ''),
+          };
+        }).toList();
+
+        setState(() {
+          _searchResults = parsedResults;
+          _isLoading = false;
+        });
       } else {
-        await _fetchFromSecondaryApi(query);
+        await _fallbackSearch(cleanQuery);
       }
     } catch (e) {
-      await _fetchFromSecondaryApi(query);
+      await _fallbackSearch(cleanQuery);
     }
   }
 
-  // خادم احتياطي في حال تعثر الأول
-  Future<void> _fetchFromSecondaryApi(String query) async {
+  // 2. المحرك الاحتياطي المباشر لموقع الدرر السنية (في حال تعثر الأولي)
+  Future<void> _fallbackSearch(String query) async {
     try {
-      final encodedQuery = Uri.encodeComponent(query.trim());
       final fallbackUrl = Uri.parse(
-        'https://dorar-hadith-api.almts.mobi/api/hadith/search?value=$encodedQuery',
+        'https://dorar.net/dorar_api.json?skey=${Uri.encodeComponent(query)}',
       );
+      final response = await http.get(fallbackUrl).timeout(const Duration(seconds: 10));
 
-      final response = await http.get(
-        fallbackUrl,
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0',
-        },
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200 && (response.body.startsWith('{') || response.body.startsWith('['))) {
+      if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        List<dynamic> results = [];
+        final String htmlContent = data['ahadith']?['result'] ?? '';
 
-        if (data is Map<String, dynamic>) {
-          results = data['data'] ?? [];
-        } else if (data is List) {
-          results = data;
-        }
-
-        if (results.isEmpty) {
+        if (htmlContent.isEmpty) {
           setState(() {
-            _errorMessage = 'لم يتم العثور على نتائج للبحث، جرب كلمات أخرى من الحديث';
+            _errorMessage = 'لم يتم العثور على نتائج للبحث.';
             _isLoading = false;
           });
-        } else {
-          setState(() {
-            _searchResults = results;
-            _isLoading = false;
-          });
+          return;
         }
+
+        List<Map<String, String>> results = _parseDorarHtml(htmlContent);
+
+        setState(() {
+          _searchResults = results;
+          _isLoading = false;
+        });
       } else {
         setState(() {
-          _errorMessage = 'سيرفر البحث متوقف حالياً، يرجى المحاولة لاحقاً';
+          _errorMessage = 'تعذر الاتصال بخدمة البحث حالياً، يرجى إعادة المحاولة.';
           _isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'تعذر الاتصال بالشبكة، تأكد من اتصال جهازك بالإنترنت';
+        _errorMessage = 'تعذر الاتصال بالشبكة، تأكد من اتصال جهازك بالإنترنت.';
         _isLoading = false;
       });
     }
+  }
+
+  String _cleanHtml(String text) {
+    return text
+        .replaceAll(RegExp(r'style="[^"]*"'), '')
+        .replaceAll(RegExp(r"style='[^']*'"), '')
+        .replaceAll(RegExp(r'<[^>]*>'), '')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'")
+        .replaceAll('&gt;', '>')
+        .replaceAll('&lt;', '<')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  List<Map<String, String>> _parseDorarHtml(String html) {
+    List<Map<String, String>> list = [];
+    final hadithBlocks = html.split('<div class="hadith"');
+
+    for (var block in hadithBlocks) {
+      if (!block.contains('</div>')) continue;
+
+      String hadithText = _cleanHtml(block);
+      if (hadithText.length > 10) {
+        list.add({
+          'hadith': hadithText,
+          'grade': 'راجع النص',
+          'rawi': 'الموسوعة الحديثية',
+          'muhaddith': 'الدرر السنية',
+          'source': '',
+        });
+      }
+    }
+    return list;
   }
 
   Color _getGradeColor(String grade) {
@@ -216,7 +214,7 @@ class _HadithSearchPageState extends State<HadithSearchPage> {
                     child: Text(
                       _errorMessage,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.red, fontSize: 16, height: 1.4),
+                      style: TextStyle(color: Colors.red.shade700, fontSize: 16, height: 1.4),
                     ),
                   ),
                 ),
@@ -231,20 +229,13 @@ class _HadithSearchPageState extends State<HadithSearchPage> {
                   itemCount: _searchResults.length,
                   itemBuilder: (context, index) {
                     final item = _searchResults[index];
-
-                    final hadithText = _cleanText(item['hadith'] ?? item['text'] ?? '');
-                    final grade = _cleanText(item['grade'] ?? item['hadithGrade'] ?? 'غير محدد');
-                    final rawi = _cleanText(item['rawi'] ?? item['narrator'] ?? 'غير معروف');
-                    final muhaddith = _cleanText(item['mukhrij'] ?? item['muhaddith'] ?? 'غير معروف');
-                    final source = _cleanText(item['source'] ?? item['book'] ?? '');
-
                     return HadithCardItem(
-                      hadithText: hadithText,
-                      grade: grade,
-                      rawi: rawi,
-                      muhaddith: muhaddith,
-                      source: source,
-                      gradeColor: _getGradeColor(grade),
+                      hadithText: item['hadith'] ?? '',
+                      grade: item['grade'] ?? 'غير محدد',
+                      rawi: item['rawi'] ?? 'غير معروف',
+                      muhaddith: item['muhaddith'] ?? 'غير معروف',
+                      source: item['source'] ?? '',
+                      gradeColor: _getGradeColor(item['grade'] ?? ''),
                     );
                   },
                 ),
@@ -386,7 +377,7 @@ class _HadithCardItemState extends State<HadithCardItem> {
                   final fullData = '''${widget.hadithText}
 الراوي: ${widget.rawi}
 المحدث: ${widget.muhaddith}
-خلاصة حكم الحديث: ${widget.grade}''';
+خلاصة حكم الحديث: ${widget.grade}${widget.source.isNotEmpty ? '\nالمصدر: ' + widget.source : ''}''';
                   Clipboard.setData(ClipboardData(text: fullData));
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
