@@ -16,32 +16,21 @@ class _HadithSearchPageState extends State<HadithSearchPage> {
   bool _isLoading = false;
   String _errorMessage = '';
 
-  // دالة تنظيف النصوص من أوسمة HTML والأرقام والرموز الزائدة
+  // دالة تنظيف النصوص من أوسمة HTML والرموز
   String _cleanText(String rawText) {
     if (rawText.isEmpty) return '';
 
     String text = rawText;
-
-    // 1. إزالة أوسمة HTML مثل <p>, <span>, <br>, <b>
     text = text.replaceAll(RegExp(r'<[^>]*>'), '');
-
-    // 2. إزالة الأرقام والأصوات المرجعية مثل <1> أو [1] أو (1)
     text = text.replaceAll(RegExp(r'[\(\[\<]\d+[\)\]\>]'), '');
-
-    // 3. تنظيف عبارات الوسوم والمواضع المكررة
     text = text.replaceAll('الموسوعة الحديثية', '');
     text = text.replaceAll('الموقع الرسمي للموسوعة الحديثية', '');
-
-    // 4. تحويل الكيانات المصرحة (HTML entities)
     text = text
         .replaceAll('&nbsp;', ' ')
         .replaceAll('&quot;', '"')
         .replaceAll('&#39;', "'")
         .replaceAll('&gt;', '>')
         .replaceAll('&lt;', '<');
-
-    // 5. إزالة المسافات والرموز المتروكة في بداية ونهاية النص
-    text = text.replaceAll(RegExp(r'^[\s\:\-\_]+'), '');
 
     return text.trim();
   }
@@ -58,24 +47,87 @@ class _HadithSearchPageState extends State<HadithSearchPage> {
     });
 
     try {
-      final url = Uri.parse('https://dorar-hadith-api.almts.mobi/api/hadith/search?value=${Uri.encodeComponent(query)}');
-      final response = await http.get(url);
+      // 1. تجربة API الدرر السنية الرئيسي بطلب مع رأسية User-Agent
+      final url = Uri.parse(
+        'https://dorar-hadith-api.almts.mobi/api/hadith/search?value=${Uri.encodeComponent(query)}',
+      );
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        },
+      ).timeout(const Duration(seconds: 12));
+
+      if (response.statusCode == 200) {
+        final decodedData = json.decode(response.body);
+
+        List<dynamic> results = [];
+        if (decodedData is Map<String, dynamic>) {
+          if (decodedData['data'] is List) {
+            results = decodedData['data'];
+          } else if (decodedData['results'] is List) {
+            results = decodedData['results'];
+          }
+        } else if (decodedData is List) {
+          results = decodedData;
+        }
+
+        if (results.isEmpty) {
+          setState(() {
+            _errorMessage = 'لم يتم العثور على أحاديث تطابق كلمة البحث';
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            _searchResults = results;
+            _isLoading = false;
+          });
+        }
+      } else {
+        // تجربة خادم احتياطي إذا فشل الأول
+        await _fetchFromSecondaryApi(query);
+      }
+    } catch (e) {
+      // في حال وجود مشكلة شبكة أو مهلة زمنية ننتقل للخادم الاحتياطي
+      await _fetchFromSecondaryApi(query);
+    }
+  }
+
+  // خادم احتياطي موثوق للأحاديث
+  Future<void> _fetchFromSecondaryApi(String query) async {
+    try {
+      final fallbackUrl = Uri.parse(
+        'https://hadith-api-1.vercel.app/api/hadiths?search=${Uri.encodeComponent(query)}',
+      );
+
+      final response = await http.get(fallbackUrl).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        setState(() {
-          _searchResults = data['data'] ?? [];
-          _isLoading = false;
-        });
+        List<dynamic> results = data['data'] ?? data['hadiths'] ?? [];
+
+        if (results.isEmpty) {
+          setState(() {
+            _errorMessage = 'لم يتم العثور على نتائج للبحث';
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            _searchResults = results;
+            _isLoading = false;
+          });
+        }
       } else {
         setState(() {
-          _errorMessage = 'حدث خطأ في الاتصال بالخادم';
+          _errorMessage = 'تعذر الاتصال بالخدمة حالياً، يرجى المحاولة لاحقاً';
           _isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'تعذر الاتصال بالشبكة، تحقق من اتصالك بالإنترنت';
+        _errorMessage = 'يرجى التأكد من اتصالك بالإنترنت والمحاولة مجدداً';
         _isLoading = false;
       });
     }
@@ -144,7 +196,16 @@ class _HadithSearchPageState extends State<HadithSearchPage> {
               )
             else if (_errorMessage.isNotEmpty)
               Expanded(
-                child: Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.red, fontSize: 16))),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      _errorMessage,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.red, fontSize: 16, height: 1.4),
+                    ),
+                  ),
+                ),
               )
             else if (_searchResults.isEmpty)
               const Expanded(
@@ -156,11 +217,10 @@ class _HadithSearchPageState extends State<HadithSearchPage> {
                   itemCount: _searchResults.length,
                   itemBuilder: (context, index) {
                     final item = _searchResults[index];
-                    
-                    // تنظيف القيم قبل العرض
-                    final hadithText = _cleanText(item['hadith'] ?? '');
-                    final grade = _cleanText(item['grade'] ?? 'غير محدد');
-                    final rawi = _cleanText(item['rawi'] ?? 'غير معروف');
+
+                    final hadithText = _cleanText(item['hadith'] ?? item['text'] ?? '');
+                    final grade = _cleanText(item['grade'] ?? item['hadithGrade'] ?? 'غير محدد');
+                    final rawi = _cleanText(item['rawi'] ?? item['narrator'] ?? 'غير معروف');
                     final muhaddith = _cleanText(item['mukhrij'] ?? item['muhaddith'] ?? 'غير معروف');
                     final source = _cleanText(item['source'] ?? item['book'] ?? '');
 
@@ -182,7 +242,6 @@ class _HadithSearchPageState extends State<HadithSearchPage> {
   }
 }
 
-// ويدجت مستقل لإدارة حالة التوسيع للحديث الطويل بدعم زر "عرض المزيد / عرض أقل"
 class HadithCardItem extends StatefulWidget {
   final String hadithText;
   final String grade;
@@ -225,7 +284,6 @@ class _HadithCardItemState extends State<HadithCardItem> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // نص الحديث التفاعلي
             AnimatedSize(
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeInOut,
@@ -239,8 +297,6 @@ class _HadithCardItemState extends State<HadithCardItem> {
                 ),
               ),
             ),
-            
-            // زر عرض المزيد / عرض أقل عند كبر نص الحديث
             if (isLongText)
               Align(
                 alignment: Alignment.centerLeft,
@@ -269,10 +325,7 @@ class _HadithCardItemState extends State<HadithCardItem> {
                   ),
                 ),
               ),
-
             const Divider(height: 20),
-
-            // معلومات درجة الحديث والراوي والمحدث
             Wrap(
               spacing: 10,
               runSpacing: 8,
@@ -309,10 +362,7 @@ class _HadithCardItemState extends State<HadithCardItem> {
                   ),
               ],
             ),
-            
             const SizedBox(height: 8),
-
-            // زر نسخ الحديث
             Align(
               alignment: Alignment.bottomLeft,
               child: IconButton(
