@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "905816133159",
+    "project_id": "mosque-system",
+    "storage_bucket": "mosque-system.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:905816133159:android:5875b8967f48d2b80e0802",
+        "android_client_info": {
+          "package_name": "com.u"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2ZnhWBccFHp6gSOoFDYtxIZr9k0evSg8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
