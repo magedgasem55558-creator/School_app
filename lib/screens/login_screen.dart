@@ -1,222 +1,138 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // إضافة المكتبة
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _phoneController = TextEditingController();
-  final _authService = AuthService();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _rememberMe = false; // حالة خيار تذكرني
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials(); // تحميل البيانات المحفوظة عند فتح الشاشة
+  }
+
+  // تحميل الإيميل المحفوظ
+  Future<void> _loadSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _emailController.text = prefs.getString('saved_email') ?? "";
+      _rememberMe = prefs.getBool('remember_me') ?? false;
+    });
+  }
+
+  // حفظ أو مسح البيانات
+  Future<void> _handleRememberMe() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_rememberMe) {
+      await prefs.setString('saved_email', _emailController.text.trim());
+      await prefs.setBool('remember_me', true);
+    } else {
+      await prefs.remove('saved_email');
+      await prefs.setBool('remember_me', false);
+    }
+  }
 
   Future<void> _login() async {
-    final phone = _phoneController.text.trim();
     setState(() => _isLoading = true);
     try {
-      final result = await _authService.login(phone);
-      setState(() => _isLoading = false);
-      if (result.success) {
-        Navigator.pushNamedAndRemoveUntil(context, '/dashboard', (route) => false);
-      } else {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+      
+      await _handleRememberMe(); // تنفيذ عملية الحفظ بعد النجاح
+
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      debugPrint("Login Error: $e");
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.message),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(20),
-            duration: const Duration(seconds: 3),
-          ),
+          SnackBar(content: Text("خطأ في الدخول: ${e.toString()}")),
         );
       }
-    } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('خطأ غير متوقع: $e'),
-          backgroundColor: Colors.redAccent,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.all(20),
-        ),
-      );
     }
+    setState(() => _isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF6A1B9A),
-              Color(0xFF9C27B0),
-              Color(0xFFE1BEE7),
-            ],
-            stops: [0.0, 0.5, 1.0],
+      body: Stack(
+        children: [
+          Container(decoration: const BoxDecoration(image: DecorationImage(image: NetworkImage('https://images.unsplash.com/photo-1590076215667-873d47343e06?q=80&w=2070'), fit: BoxFit.cover))),
+          BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(color: Colors.black.withOpacity(0.6)),
           ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
+          Center(
+            child: SingleChildScrollView( // لتجنب مشاكل المساحة عند ظهور الكيبورد
+              padding: const EdgeInsets.all(30.0),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // شعار المدرسة
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.school,
-                      size: 80,
-                      color: Colors.white,
-                    ),
-                  ),
+                  const Text("دخول أولياء الأمور", style: TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 30),
-                  // نص الترحيب
-                  const Text(
-                    'المدرسة النموذجية',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 2,
-                      shadows: [
-                        Shadow(
-                          blurRadius: 10,
-                          color: Colors.black26,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
+                  _buildTextField(_emailController, "البريد الإلكتروني", Icons.email),
+                  const SizedBox(height: 15),
+                  _buildTextField(_passwordController, "كلمة المرور", Icons.lock, obscure: true),
+                  
+                  // --- إضافة خيار تذكرني ---
+                  Theme(
+                    data: ThemeData(unselectedWidgetColor: Colors.white70),
+                    child: CheckboxListTile(
+                      title: const Text("تذكرني", style: TextStyle(color: Colors.white70)),
+                      value: _rememberMe,
+                      activeColor: Colors.tealAccent,
+                      checkColor: Colors.black,
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      onChanged: (bool? value) {
+                        setState(() => _rememberMe = value ?? false);
+                      },
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'تسجيل دخول ولي الأمر',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.white.withOpacity(0.9),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 50),
-                  // حقل رقم الجوال
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
-                          blurRadius: 15,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      style: const TextStyle(fontSize: 18),
-                      decoration: InputDecoration(
-                        hintText: 'أدخل رقم الجوال',
-                        prefixIcon: const Icon(Icons.phone_android_rounded),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          borderSide: BorderSide.none,
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          borderSide: const BorderSide(color: Color(0xFFFFD700), width: 2),
-                        ),
+                  
+                  const SizedBox(height: 20),
+                  _isLoading 
+                    ? const CircularProgressIndicator(color: Colors.tealAccent)
+                    : ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.tealAccent[700], minimumSize: const Size(double.infinity, 50)),
+                        onPressed: _login,
+                        child: const Text("دخول", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-                  // زر الدخول
-                  SizedBox(
-                    width: double.infinity,
-                    height: 55,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _login,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFFD700),
-                        foregroundColor: Colors.black87,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        elevation: 10,
-                        shadowColor: const Color(0xFFFFD700).withOpacity(0.5),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.black87,
-                                strokeWidth: 2.5,
-                              ),
-                            )
-                          : const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'دخول',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1,
-                                  ),
-                                ),
-                                SizedBox(width: 8),
-                                Icon(Icons.arrow_forward_rounded),
-                              ],
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  TextButton(
-                    onPressed: () => Navigator.pushNamed(context, '/about'),
-                    child: const Text(
-                      'عن المدرسة',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    super.dispose();
+  Widget _buildTextField(TextEditingController controller, String label, IconData icon, {bool obscure = false}) {
+    return TextField(
+      controller: controller,
+      obscureText: obscure,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        prefixIcon: Icon(icon, color: Colors.white70),
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.white70),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.1),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+      ),
+    );
   }
 }
