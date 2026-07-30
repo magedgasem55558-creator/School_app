@@ -1,203 +1,152 @@
+import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
-import 'curriculum_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:adhan/adhan.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class HomeScreen extends StatefulWidget {
+import 'hisn_el_muslim_page.dart';
+import 'yasser_dossari_page.dart'; // <--- استيراد صفحة القرآن الخاصة بك
+import '../services/firebase_service.dart';
+import '../models/mosque_models.dart';
+import 'login_screen.dart';
+import 'my_children_screen.dart';
+import 'leaderboard_screen.dart';
+import 'donate_screen.dart';
+
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
 
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-  late AnimationController _pulseController;
-  late AnimationController _floatController;
-  late Animation<double> _floatAnimation;
+  void _openWhatsApp(BuildContext context) async {
+    const phone = '967776503890';
+    const message = 'السلام عليكم، أود الاستفسار عن تطبيق المسجد أو طلب نسخة لمسجدنا.';
+    final url = Uri.parse('https://wa.me/$phone?text=${Uri.encodeComponent(message)}');
 
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    )..repeat(reverse: true);
-    _floatController = AnimationController(
-      duration: const Duration(seconds: 4),
-      vsync: this,
-    )..repeat();
-    _floatAnimation = Tween<double>(begin: -8, end: 8).animate(
-      CurvedAnimation(parent: _floatController, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    _floatController.dispose();
-    super.dispose();
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر فتح واتساب')),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final service = FirebaseService();
+
     return Scaffold(
+      extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          // خلفية ساحرة
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF0D0221), // أسود بنفسجي عميق
-                  Color(0xFF150734),
-                  Color(0xFF2A0A5C),
-                  Color(0xFF6A1B9A),
-                ],
-                stops: [0.0, 0.3, 0.7, 1.0],
-              ),
-            ),
-          ),
-          // نجوم متحركة (CustomPainter)
-          CustomPaint(
-            painter: StarFieldPainter(),
-            size: Size.infinite,
-          ),
-          // تأثيرات ضوئية عائمة
-          AnimatedBuilder(
-            animation: _floatAnimation,
-            builder: (context, child) {
-              return Positioned(
-                top: 100 + _floatAnimation.value,
-                right: -50,
-                child: Container(
-                  width: 200,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        const Color(0xFFFFD700).withOpacity(0.2),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-          // المحتوى الرئيسي
+          Container(color: const Color(0xFF1A002D)),
+          Container(color: Colors.black.withOpacity(0.6)),
           SafeArea(
-            child: Column(
-              children: [
-                const SizedBox(height: 40),
-                // شعار المدرسة بتأثير نبض
-                AnimatedBuilder(
-                  animation: _pulseController,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: 1 + (_pulseController.value * 0.05),
-                      child: Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFFFD700), Color(0xFFFFA000)],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFFFD700).withOpacity(0.6),
-                              blurRadius: 30,
-                              spreadRadius: 5,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("مرحباً بك في مسجدنا", style: TextStyle(color: Colors.white70, fontSize: 16)),
+                  const SizedBox(height: 15),
+                  const AutoPrayerCountdownGlass(),
+                  const SizedBox(height: 12),
+                  const RemembranceCarousel(),
+                  const SizedBox(height: 15),
+                  _buildInfoRow(service),
+                  const SizedBox(height: 12),
+                  _buildUpcomingLecture(),
+                  const SizedBox(height: 30),
+                  const Text("أقسام المسجد", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 15),
+                  GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 15,
+                    crossAxisSpacing: 15,
+                    childAspectRatio: 1.1,
+                    children: [
+                      // 1. المتصدرون
+                      _buildGridItem(context, "المتصدرون", Icons.emoji_events, Colors.amberAccent, () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaderboardScreen()));
+                      }),
+
+                      // 2. أبنائي / دخول الآباء
+                      StreamBuilder<User?>(
+                        stream: FirebaseAuth.instance.authStateChanges(),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData) {
+                            return _buildGridItem(context, "أبنائي", Icons.family_restroom, Colors.tealAccent, () {
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => const MyChildrenScreen()));
+                            });
+                          } else {
+                            return _buildGridItem(context, "دخول الآباء", Icons.lock_outline, Colors.blueAccent, () {
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+                            });
+                          }
+                        },
+                      ),
+
+                      // 3. القرآن الكريم (الانتقال لصفحتك المحددة)
+                      _buildGridItem(context, "القرآن الكريم", Icons.menu_book_rounded, Colors.emeraldAccent, () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const YasserDossariPage()));
+                      }),
+
+                      // 4. حصن المسلم
+                      _buildGridItem(context, "حصن المسلم", Icons.shield, Colors.lightGreenAccent, () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const HisnElMuslimPage()));
+                      }),
+
+                      // 5. البحث عن حديث
+                      _buildGridItem(context, "البحث عن حديث", Icons.search_rounded, Colors.cyanAccent, () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const HadithSearchScreen()));
+                      }),
+
+                      // 6. تبرع للمسجد
+                      _buildGridItem(context, "تبرع للمسجد", Icons.favorite, Colors.pinkAccent, () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const DonateScreen()));
+                      }),
+                    ],
+                  ),
+                  StreamBuilder<User?>(
+                    stream: FirebaseAuth.instance.authStateChanges(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 20),
+                          child: Center(
+                            child: TextButton.icon(
+                              onPressed: () => FirebaseAuth.instance.signOut(),
+                              icon: const Icon(Icons.logout, color: Colors.white54),
+                              label: const Text("تسجيل الخروج", style: TextStyle(color: Colors.white54)),
                             ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.school,
-                          size: 50,
-                          color: Colors.white,
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Center(
+                      child: TextButton.icon(
+                        onPressed: () => _openWhatsApp(context),
+                        icon: const Icon(Icons.developer_mode, color: Colors.tealAccent),
+                        label: const Text(
+                          "انقر هنا للتواصل مع المطور\nأو لطلب نسخة لمسجدك",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.tealAccent, fontSize: 12),
                         ),
                       ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 24),
-                // اسم المدرسة بتأثير ذهبي
-                ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    colors: [Color(0xFFFFD700), Color(0xFFFFF8E1), Color(0xFFFFA000)],
-                  ).createShader(bounds),
-                  child: const Text(
-                    'المدرسة النموذجية',
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 2,
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'مرحباً بكم في منصة التعليم المتميز',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.white.withOpacity(0.8),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'مسيرة عطاء منذ عام 1990',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white.withOpacity(0.6),
-                  ),
-                ),
-                const SizedBox(height: 40),
-                // البطاقات السحرية
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildLuxuryCard(
-                          icon: Icons.menu_book_rounded,
-                          title: 'المنهج اليمني',
-                          subtitle: 'تصفح المناهج الدراسية الرسمية',
-                          color: const Color(0xFF00E5FF),
-                          onTap: () => Navigator.push(
-                            context,
-                            PageRouteBuilder(
-                              pageBuilder: (_, __, ___) => const CurriculumScreen(),
-                              transitionsBuilder: (_, anim, __, child) {
-                                return FadeTransition(opacity: anim, child: ScaleTransition(scale: anim, child: child));
-                              },
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildLuxuryCard(
-                          icon: Icons.login_rounded,
-                          title: 'دخول ولي الأمر',
-                          subtitle: 'متابعة الأبناء والدرجات والحضور',
-                          color: const Color(0xFFE040FB),
-                          onTap: () => Navigator.pushNamed(context, '/login'),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildLuxuryCard(
-                          icon: Icons.info_outline_rounded,
-                          title: 'عن المدرسة',
-                          subtitle: 'تعرف على رؤيتنا ورسالتنا',
-                          color: const Color(0xFFFF9100),
-                          onTap: () => Navigator.pushNamed(context, '/about'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -205,113 +154,414 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildLuxuryCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 600),
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, 30 * (1 - value)),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(24),
-                onTap: onTap,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: color.withOpacity(0.5),
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: color.withOpacity(0.3),
-                        blurRadius: 20,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [color.withOpacity(0.4), color.withOpacity(0.1)],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: color.withOpacity(0.5),
-                              blurRadius: 15,
-                            ),
-                          ],
-                        ),
-                        child: Icon(icon, size: 32, color: Colors.white),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              title,
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: color,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              subtitle,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.white.withOpacity(0.7),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(Icons.arrow_forward_ios, color: color, size: 20),
-                    ],
-                  ),
-                ),
+  Widget _buildInfoRow(FirebaseService service) {
+    return StreamBuilder<NextKhutba>(
+      stream: service.streamNextKhutba(),
+      builder: (context, khutbaSnapshot) {
+        if (khutbaSnapshot.connectionState == ConnectionState.waiting) {
+          return _buildGlassCard(
+            child: const ListTile(title: Text("جاري جلب الخطبة...", style: TextStyle(color: Colors.white54))),
+          );
+        }
+        final khutba = khutbaSnapshot.data;
+
+        return StreamBuilder<DocumentSnapshot>(
+          stream: FirebaseFirestore.instance.collection('settings').doc('next_event').snapshots(),
+          builder: (context, eventSnapshot) {
+            if (eventSnapshot.connectionState == ConnectionState.waiting ||
+                eventSnapshot.hasError ||
+                !eventSnapshot.hasData ||
+                !eventSnapshot.data!.exists) {
+              return _buildKhutbaCard(khutba);
+            }
+
+            final eventData = eventSnapshot.data!.data() as Map<String, dynamic>?;
+            if (eventData == null || (eventData['title'] as String? ?? '').isEmpty) {
+              return _buildKhutbaCard(khutba);
+            }
+
+            return Column(
+              children: [
+                _buildKhutbaCard(khutba),
+                const SizedBox(height: 10),
+                _buildEventCard(eventData),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildUpcomingLecture() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('lectures').snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return const SizedBox.shrink();
+
+        final now = DateTime.now();
+        List<Map<String, dynamic>> upcoming = [];
+        for (var doc in snapshot.data!.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          final timeStr = data['time'] as String?;
+          if (timeStr != null) {
+            final time = DateTime.tryParse(timeStr);
+            if (time != null && time.isAfter(now)) {
+              data['id'] = doc.id;
+              upcoming.add(data);
+            }
+          }
+        }
+
+        if (upcoming.isEmpty) return const SizedBox.shrink();
+
+        upcoming.sort((a, b) => DateTime.parse(a['time']).compareTo(DateTime.parse(b['time'])));
+        final lecture = upcoming.first;
+
+        return _buildGlassCard(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: Colors.purpleAccent.withOpacity(0.1), shape: BoxShape.circle),
+                child: const Icon(Icons.menu_book, color: Colors.purpleAccent, size: 28),
               ),
+              title: const Text("محاضرة قادمة", style: TextStyle(color: Colors.purpleAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(lecture['title'] ?? 'محاضرة', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  if (lecture['speaker'] != null && (lecture['speaker'] as String).isNotEmpty)
+                    Text("المحاضر: ${lecture['speaker']}", style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  Text(_formatLectureTime(lecture['time']), style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                ],
+              ),
+              trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white24, size: 14),
             ),
           ),
         );
       },
     );
   }
+
+  String _formatLectureTime(String? isoTime) {
+    if (isoTime == null) return '';
+    final dt = DateTime.tryParse(isoTime);
+    if (dt == null) return isoTime;
+    return '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}  ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
+  Widget _buildKhutbaCard(NextKhutba? khutba) {
+    return _buildGlassCard(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: ListTile(
+          leading: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: Colors.tealAccent.withOpacity(0.1), shape: BoxShape.circle),
+            child: const Icon(Icons.mic_external_on, color: Colors.tealAccent, size: 28),
+          ),
+          title: const Text("خطبة الجمعة القادمة", style: TextStyle(color: Colors.tealAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(khutba?.title ?? "لم يتم تحديد العنوان", style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              Text("الخطيب: ${khutba?.imam ?? 'غير محدد'}", style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            ],
+          ),
+          trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white24, size: 14),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEventCard(Map<String, dynamic> event) {
+    final title = event['title'] ?? 'فعالية';
+    final location = event['location'] ?? '';
+    String? timeStr = event['time'] as String? ?? event['date'] as String?;
+    String dateStr = timeStr != null && timeStr.isNotEmpty ? _formatLectureTime(timeStr) : '';
+
+    return _buildGlassCard(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: ListTile(
+          leading: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: Colors.orangeAccent.withOpacity(0.1), shape: BoxShape.circle),
+            child: const Icon(Icons.event, color: Colors.orangeAccent, size: 28),
+          ),
+          title: const Text("فعالية قادمة", style: TextStyle(color: Colors.orangeAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              if (location.isNotEmpty) Text("المكان: $location", style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              if (dateStr.isNotEmpty) Text(dateStr, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            ],
+          ),
+          trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white24, size: 14),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGridItem(BuildContext context, String title, IconData icon, Color color, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: color.withOpacity(0.2), shape: BoxShape.circle),
+              child: Icon(icon, size: 32, color: color),
+            ),
+            const SizedBox(height: 12),
+            Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlassCard({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: child,
+    );
+  }
 }
 
-// رسام النجوم الخلفي
-class StarFieldPainter extends CustomPainter {
+class RemembranceCarousel extends StatefulWidget {
+  const RemembranceCarousel({super.key});
+
   @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withOpacity(0.8);
-    final random = math.Random(42);
-    for (int i = 0; i < 80; i++) {
-      final x = random.nextDouble() * size.width;
-      final y = random.nextDouble() * size.height;
-      final radius = random.nextDouble() * 2.5;
-      paint.color = Colors.white.withOpacity(random.nextDouble() * 0.7 + 0.2);
-      canvas.drawCircle(Offset(x, y), radius, paint);
+  State<RemembranceCarousel> createState() => _RemembranceCarouselState();
+}
+
+class _RemembranceCarouselState extends State<RemembranceCarousel> {
+  int _currentIndex = 0;
+  Timer? _timer;
+
+  final List<String> _remembrances = [
+    "سُبْحَانَ اللَّهِ وَبِحَمْدِهِ، سُبْحَانَ اللَّهِ الْعَظِيمِ",
+    "لاَ إِلَهَ إِلاَّ أَنْتَ سُبْحَانَكَ إِنِّي كُنْتُ مِنَ الظَّالِمِينَ",
+    "سُبْحَانَ اللَّهِ، وَالْحَمْدُ لِلَّهِ، وَلاَ إِلَهَ إِلاَّ اللَّهُ، وَاللَّهُ أَكْبَرُ",
+    "أَسْتَغْفِرُ اللَّهَ الَّذِي لاَ إِلَهَ إِلاَّ هُوَ الْحَيُّ الْقَيُّومُ وَأَتُوبُ إِلَيْهِ",
+    "اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ وَعَلَى آلِ مُحَمَّدٍ",
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (mounted) {
+        setState(() => _currentIndex = (_currentIndex + 1) % _remembrances.length);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.15)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.format_quote, color: Colors.amberAccent, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 800),
+              child: Text(
+                _remembrances[_currentIndex],
+                key: ValueKey<int>(_currentIndex),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.5, fontWeight: FontWeight.w500),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Icon(Icons.format_quote, color: Colors.amberAccent, size: 20),
+        ],
+      ),
+    );
+  }
+}
+
+class AutoPrayerCountdownGlass extends StatefulWidget {
+  const AutoPrayerCountdownGlass({super.key});
+
+  @override
+  State<AutoPrayerCountdownGlass> createState() => _AutoPrayerCountdownGlassState();
+}
+
+class _AutoPrayerCountdownGlassState extends State<AutoPrayerCountdownGlass> {
+  String _nextPrayerName = "جاري الحساب...";
+  Duration _timeLeft = Duration.zero;
+  Timer? _timer;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initPrayerLogic();
+  }
+
+  Future<void> _initPrayerLogic() async {
+    try {
+      LocationPermission permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+
+      Position position = await Geolocator.getCurrentPosition();
+      final coordinates = Coordinates(position.latitude, position.longitude);
+      final params = CalculationMethod.umm_al_qura.getParameters();
+      params.madhab = Madhab.shafi;
+
+      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        final prayerTimes = PrayerTimes.today(coordinates, params);
+        final next = prayerTimes.nextPrayer();
+
+        if (mounted) {
+          setState(() {
+            if (next != Prayer.none) {
+              _nextPrayerName = _translatePrayer(next);
+              _timeLeft = prayerTimes.timeForPrayer(next)!.difference(DateTime.now());
+            } else {
+              _nextPrayerName = "الفجر";
+              final tomorrow = DateTime.now().add(const Duration(days: 1));
+              final tomorrowTimes = PrayerTimes(coordinates, DateComponents.from(tomorrow), params);
+              _timeLeft = tomorrowTimes.fajr.difference(DateTime.now());
+            }
+            _loading = false;
+          });
+        }
+      });
+    } catch (e) {
+      if (mounted) setState(() => _nextPrayerName = "خطأ في تحديد الموقع");
+    }
+  }
+
+  String _translatePrayer(Prayer prayer) {
+    switch (prayer) {
+      case Prayer.fajr: return "الفجر";
+      case Prayer.dhuhr: return "الظهر";
+      case Prayer.asr: return "العصر";
+      case Prayer.maghrib: return "المغرب";
+      case Prayer.isha: return "العشاء";
+      default: return "الصلاة";
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return Container(
+        height: 120,
+        decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(25)),
+        child: const Center(child: CircularProgressIndicator(color: Colors.tealAccent)),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.tealAccent.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(color: Colors.tealAccent.withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.access_time, color: Colors.tealAccent, size: 18),
+              const SizedBox(width: 8),
+              Text("المتبقي لصلاة $_nextPrayerName", style: const TextStyle(color: Colors.white70, fontSize: 14)),
+            ],
+          ),
+          const SizedBox(height: 15),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _timePart(_timeLeft.inHours.toString().padLeft(2, '0'), "ساعة"),
+              _buildDivider(),
+              _timePart((_timeLeft.inMinutes % 60).toString().padLeft(2, '0'), "دقيقة"),
+              _buildDivider(),
+              _timePart((_timeLeft.inSeconds % 60).toString().padLeft(2, '0'), "ثانية"),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _timePart(String value, String label) {
+    return Column(
+      children: [
+        Text(value, style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(color: Colors.tealAccent, fontSize: 11)),
+      ],
+    );
+  }
+
+  Widget _buildDivider() => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10).copyWith(bottom: 15),
+        child: const Text(":", style: TextStyle(color: Colors.tealAccent, fontSize: 24)),
+      );
+}
+
+// =======================================================
+// شاشة البحث عن حديث المؤقتة (إلى حين ربط شاشتك الخاصة بها)
+// =======================================================
+
+class HadithSearchScreen extends StatelessWidget {
+  const HadithSearchScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF1A002D),
+      appBar: AppBar(
+        title: const Text("البحث عن حديث", style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: const Center(
+        child: Text("صفحة البحث عن الأحاديث النبوية قيد التطوير", style: TextStyle(color: Colors.white70, fontSize: 18)),
+      ),
+    );
+  }
 }
