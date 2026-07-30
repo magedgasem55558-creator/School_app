@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
-import 'screens/home_screen.dart'; // <--- تم تصحيح المسار ليربط بمجلد screens
+import 'package:firebase_core/firebase_core.dart';
+import 'screens/home_screen.dart';
 
-void main() {
+void main() async {
+  // 1. ضمان تهيئة محرك فلاتر قبل استدعاء أي خدمات خارجية
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 2. تهيئة خدمة الفايربيس (هذا السطر هو المفتاح لمنع الشاشة البيضاء)
+  await Firebase.initializeApp();
+
   runApp(const MyApp());
 }
 
@@ -17,7 +24,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.teal,
         useMaterial3: true,
       ),
-      home: const HomeScreen(), // <--- ستفتح الشاشة الرئيسية فور شغل التطبيق
+      home: const HomeScreen(),
     );
   }
 }
