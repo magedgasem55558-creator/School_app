@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'yasser_dossari_page.dart';
+import 'screens/home_screen.dart'; // <--- تم تصحيح المسار ليربط بمجلد screens
 
 void main() {
   runApp(const MyApp());
@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.teal,
         useMaterial3: true,
       ),
-      home: const YasserDossariQuranPage(),
+      home: const HomeScreen(), // <--- ستفتح الشاشة الرئيسية فور شغل التطبيق
     );
   }
 }
