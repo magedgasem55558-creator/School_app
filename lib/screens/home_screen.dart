@@ -92,9 +92,9 @@ class HomeScreen extends StatelessWidget {
                         },
                       ),
 
-                      // 3. القرآن الكريم (الانتقال لصفحتك المحددة)
-                      _buildGridItem(context, "القرآن الكريم", Icons.menu_book_rounded, Colors.emeraldAccent, () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const YasserDossariPage()));
+                      // 3. القرآن الكريم (الانتقال لصفحتك المحددة - تم تعديل اللون وإزالة const)
+                      _buildGridItem(context, "القرآن الكريم", Icons.menu_book_rounded, Colors.tealAccent, () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => YasserDossariPage()));
                       }),
 
                       // 4. حصن المسلم
