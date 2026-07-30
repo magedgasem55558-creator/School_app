@@ -4,30 +4,45 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.10.7
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
+
+  # --- خدمات Firebase الأساسية ---
+  firebase_core: ^3.1.0
+  cloud_firestore: ^5.0.1
+  firebase_auth: ^5.1.0
+
+  # --- حساب أوقات الصلاة والروابط ---
+  adhan: ^2.0.0
+  url_launcher: ^6.3.0
+
+  # --- الوسائط والخرائط والرسوم البيانية ---
   audioplayers: ^6.0.0
-  cupertino_icons: ^1.0.8
-  supabase_flutter: ^2.0.0
-  intl: ^0.18.1
-  http: ^1.1.0
   fl_chart: ^0.66.0
   flutter_map: ^6.1.0
   latlong2: ^0.9.0
-  dio: ^5.4.0
 
-  # --- حزم قسم القبلة والموقع ---
+  # --- الشبكات والبيانات ---
+  http: ^1.1.0
+  dio: ^5.4.0
+  intl: ^0.18.1
+  supabase_flutter: ^2.0.0 # متبقية بناءً على طلبك
+
+  # --- قسم القبلة والموقع والمستشعرات ---
   geolocator: ^10.1.0
   flutter_compass: ^0.8.0
   permission_handler: ^11.3.1
 
+  # --- التصميم والرموز ---
+  cupertino_icons: ^1.0.8
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
