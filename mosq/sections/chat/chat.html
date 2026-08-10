@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+
+<html
+    lang="ar"
+    dir="rtl"
+>
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="theme-color"
+        content="#176b5b"
+    >
+
+    <title>
+        محادثة ولي الأمر
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="../../style.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="halaqat.css"
+    >
+
+    <style>
+
+        /* =====================================================
+           صفحة المحادثة
+           ===================================================== */
+
+        .chat-page {
+
+            max-width: 850px;
+
+            margin:
+                0 auto;
+
+            padding:
+                20px;
+
+        }
+
+
+        /* =====================================================
+           رأس المحادثة
+           ===================================================== */
+
+        .chat-page-header {
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            gap:
+                12px;
+
+            margin-bottom:
+                15px;
+
+        }
+
+
+        .back-chat-btn {
+
+            width:
+                45px;
+
+            height:
+                45px;
+
+            border:
+                none;
+
+            border-radius:
+                12px;
+
+            background:
+                #176b5b;
+
+            color:
+                white;
+
+            font-size:
+                20px;
+
+            cursor:
+                pointer;
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            justify-content:
+                center;
+
+        }
+
+
+        .chat-page-title {
+
+            flex:
+                1;
+
+        }
+
+
+        .chat-page-title h1 {
+
+            margin:
+                0;
+
+            font-size:
+                22px;
+
+        }
+
+
+        .chat-page-title p {
+
+            margin:
+                5px 0 0;
+
+            color:
+                #777;
+
+            font-size:
+                14px;
+
+        }
+
+
+        /* =====================================================
+           البطاقة
+           ===================================================== */
+
+        .chat-page-card {
+
+            background:
+                white;
+
+            border-radius:
+                18px;
+
+            overflow:
+                hidden;
+
+            box-shadow:
+                0 8px 30px
+                rgba(0,0,0,.08);
+
+        }
+
+
+        /* =====================================================
+           معلومات الطالب
+           ===================================================== */
+
+        .chat-profile {
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            gap:
+                12px;
+
+            padding:
+                16px;
+
+            border-bottom:
+                1px solid #eee;
+
+            background:
+                #f8fbfa;
+
+        }
+
+
+        .chat-profile-avatar {
+
+            width:
+                48px;
+
+            height:
+                48px;
+
+            border-radius:
+                50%;
+
+            background:
+                #176b5b;
+
+            color:
+                white;
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            justify-content:
+                center;
+
+            font-size:
+                24px;
+
+        }
+
+
+        .chat-profile-info {
+
+            flex:
+                1;
+
+        }
+
+
+        .chat-profile-info strong {
+
+            display:
+                block;
+
+            font-size:
+                16px;
+
+        }
+
+
+        .chat-profile-info small {
+
+            display:
+                block;
+
+            margin-top:
+                4px;
+
+            color:
+                #777;
+
+        }
+
+
+        /* =====================================================
+           الرسائل
+           ===================================================== */
+
+        .chat-messages {
+
+            height:
+                500px;
+
+            overflow-y:
+                auto;
+
+            padding:
+                20px;
+
+            background:
+                #f5f7f7;
+
+        }
+
+
+        .chat-empty {
+
+            min-height:
+                300px;
+
+            display:
+                flex;
+
+            flex-direction:
+                column;
+
+            align-items:
+                center;
+
+            justify-content:
+                center;
+
+            gap:
+                8px;
+
+            text-align:
+                center;
+
+            color:
+                #777;
+
+        }
+
+
+        .chat-empty-icon {
+
+            font-size:
+                42px;
+
+            margin-bottom:
+                5px;
+
+        }
+
+
+        .chat-message {
+
+            max-width:
+                78%;
+
+            padding:
+                10px 13px;
+
+            margin-bottom:
+                12px;
+
+            border-radius:
+                14px;
+
+            word-break:
+                break-word;
+
+        }
+
+
+        .chat-message.teacher {
+
+            margin-right:
+                auto;
+
+            margin-left:
+                0;
+
+            background:
+                #176b5b;
+
+            color:
+                white;
+
+            border-bottom-right-radius:
+                4px;
+
+        }
+
+
+        .chat-message.parent {
+
+            margin-left:
+                auto;
+
+            margin-right:
+                0;
+
+            background:
+                white;
+
+            color:
+                #222;
+
+            border:
+                1px solid #e5e5e5;
+
+            border-bottom-left-radius:
+                4px;
+
+        }
+
+
+        .chat-sender {
+
+            font-size:
+                12px;
+
+            font-weight:
+                bold;
+
+            margin-bottom:
+                5px;
+
+            opacity:
+                .8;
+
+        }
+
+
+        .chat-text {
+
+            font-size:
+                15px;
+
+            line-height:
+                1.7;
+
+        }
+
+
+        .chat-message-meta {
+
+            font-size:
+                10px;
+
+            margin-top:
+                5px;
+
+            opacity:
+                .65;
+
+        }
+
+
+        /* =====================================================
+           منطقة الإدخال
+           ===================================================== */
+
+        .chat-input-area {
+
+            display:
+                flex;
+
+            align-items:
+                flex-end;
+
+            gap:
+                10px;
+
+            padding:
+                14px;
+
+            background:
+                white;
+
+            border-top:
+                1px solid #eee;
+
+        }
+
+
+        .chat-input-area textarea {
+
+            flex:
+                1;
+
+            resize:
+                none;
+
+            min-height:
+                44px;
+
+            max-height:
+                110px;
+
+            border:
+                1px solid #ddd;
+
+            border-radius:
+                12px;
+
+            padding:
+                11px 13px;
+
+            font-family:
+                inherit;
+
+            font-size:
+                15px;
+
+            outline:
+                none;
+
+        }
+
+
+        .chat-input-area textarea:focus {
+
+            border-color:
+                #176b5b;
+
+        }
+
+
+        .send-chat-btn {
+
+            width:
+                45px;
+
+            height:
+                45px;
+
+            border:
+                none;
+
+            border-radius:
+                12px;
+
+            background:
+                #176b5b;
+
+            color:
+                white;
+
+            font-size:
+                19px;
+
+            cursor:
+                pointer;
+
+            flex-shrink:
+                0;
+
+        }
+
+
+        .send-chat-btn:disabled {
+
+            opacity:
+                .6;
+
+            cursor:
+                not-allowed;
+
+        }
+
+
+        /* =====================================================
+           حالة التحميل
+           ===================================================== */
+
+        .chat-loading {
+
+            min-height:
+                400px;
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            justify-content:
+                center;
+
+            text-align:
+                center;
+
+            color:
+                #777;
+
+            padding:
+                20px;
+
+        }
+
+
+        /* =====================================================
+           الهاتف
+           ===================================================== */
+
+        @media (
+            max-width: 600px
+        ) {
+
+            .chat-page {
+
+                padding:
+                    10px;
+
+            }
+
+
+            .chat-messages {
+
+                height:
+                    calc(
+                        100vh - 260px
+                    );
+
+                min-height:
+                    350px;
+
+            }
+
+
+            .chat-message {
+
+                max-width:
+                    88%;
+
+            }
+
+
+            .chat-page-title h1 {
+
+                font-size:
+                    18px;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<main class="chat-page">
+
+
+    <!-- ==================================================
+         رأس الصفحة
+         ================================================== -->
+
+    <header class="chat-page-header">
+
+
+        <button
+            id="backChatBtn"
+            class="back-chat-btn"
+            type="button"
+            aria-label="العودة"
+        >
+            →
+        </button>
+
+
+        <div class="chat-page-title">
+
+            <h1>
+                💬 محادثة ولي الأمر
+            </h1>
+
+            <p>
+                التواصل بين الشيخ وولي أمر الطالب
+            </p>
+
+        </div>
+
+
+    </header>
+
+
+
+    <!-- ==================================================
+         بطاقة المحادثة
+         ================================================== -->
+
+    <section class="chat-page-card">
+
+
+        <!-- ==================================================
+             بيانات الطالب
+             ================================================== -->
+
+        <div
+            id="chatProfile"
+            class="chat-profile"
+        >
+
+            <div class="chat-profile-avatar">
+                👨‍👩‍👦
+            </div>
+
+
+            <div class="chat-profile-info">
+
+                <strong id="chatStudentName">
+                    جاري التحميل...
+                </strong>
+
+                <small id="chatHalaqaName">
+                    جاري تحميل الحلقة...
+                </small>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- ==================================================
+             الرسائل
+             ================================================== -->
+
+        <div
+            id="chatMessages"
+            class="chat-messages"
+        >
+
+            <div class="chat-loading">
+
+                ⏳ جاري تحميل المحادثة...
+
+            </div>
+
+        </div>
+
+
+
+        <!-- ==================================================
+             الإدخال
+             ================================================== -->
+
+        <div class="chat-input-area">
+
+
+            <textarea
+                id="chatMessageInput"
+                placeholder="اكتب رسالة لولي الأمر..."
+                rows="1"
+            ></textarea>
+
+
+            <button
+                id="sendChatMessageBtn"
+                type="button"
+                class="send-chat-btn"
+                aria-label="إرسال"
+            >
+                📤
+            </button>
+
+
+        </div>
+
+
+    </section>
+
+
+</main>
+
+
+
+<script
+    type="module"
+    src="chat.js"
+></script>
+
+
+</body>
+
+</html>
