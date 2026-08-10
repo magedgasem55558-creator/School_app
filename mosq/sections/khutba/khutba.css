@@ -1,0 +1,3 @@
+/* khutba.css */
+body { background: linear-gradient(135deg, #fef9e7 0%, #fdf2d0 100%); }
+.card { border-left: 5px solid var(--gold); background: rgba(255,255,255,0.85); }

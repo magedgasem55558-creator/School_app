@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    >
+
+    <title>تقارير الطلاب | مسجد الخلفاء الراشدين</title>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+    <link
+        rel="stylesheet"
+        href="reports.css"
+    >
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+</head>
+
+
+<body>
+
+<div class="reports-page">
+
+    <!-- =====================================================
+         لوحة التحكم
+    ====================================================== -->
+
+    <aside class="control-panel no-print">
+
+        <div class="panel-brand">
+
+            <div class="brand-icon">
+                📊
+            </div>
+
+            <div>
+
+                <h1>
+                    مركز التقارير
+                </h1>
+
+                <p>
+                    مسجد الخلفاء الراشدين
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="panel-divider"></div>
+
+
+        <div class="panel-heading">
+            إعداد تقرير الطالب
+        </div>
+
+
+        <!-- الطالب -->
+
+        <div class="form-group">
+
+            <label>
+                الطالب
+            </label>
+
+
+            <!--
+                اختيار طالب قابل للبحث
+            -->
+
+            <div
+                class="searchable-student"
+                id="studentPicker"
+            >
+
+                <div class="student-search-box">
+
+                    <span class="student-search-icon">
+                        🔎
+                    </span>
+
+                    <input
+                        type="text"
+                        id="studentSearchInput"
+                        placeholder="اضغط هنا للبحث باسم الطالب..."
+                        autocomplete="off"
+                    >
+
+                    <button
+                        type="button"
+                        id="studentSearchClear"
+                        class="student-search-clear"
+                        aria-label="مسح"
+                        style="display:none;"
+                    >
+                        ×
+                    </button>
+
+                </div>
+
+
+                <div
+                    id="studentDropdown"
+                    class="student-dropdown"
+                >
+
+                    <div class="student-dropdown-empty">
+                        اكتب اسم الطالب للبحث
+                    </div>
+
+                </div>
+
+
+                <!--
+                    يحتفظ بمعرف الطالب المختار
+                -->
+
+                <input
+                    type="hidden"
+                    id="studentSelect"
+                    value=""
+                >
+
+            </div>
+
+        </div>
+
+
+        <!-- الشهر -->
+
+        <div class="form-group">
+
+            <label for="monthSelect">
+                الشهر
+            </label>
+
+            <input
+                type="month"
+                id="monthSelect"
+            >
+
+        </div>
+
+
+        <!-- مستوى التقرير -->
+
+        <div class="form-group">
+
+            <label for="reportType">
+                مستوى التفاصيل
+            </label>
+
+            <select id="reportType">
+
+                <option value="summary">
+                    تقرير مختصر
+                </option>
+
+                <option value="detailed">
+                    تقرير تفصيلي
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <!-- الملاحظات -->
+
+        <div class="form-group">
+
+            <label for="reportNotes">
+                ملاحظات الإدارة
+            </label>
+
+            <textarea
+                id="reportNotes"
+                rows="4"
+                placeholder="أضف ملاحظات أو توصيات تظهر في نهاية التقرير..."
+            ></textarea>
+
+        </div>
+
+
+        <div class="panel-actions">
+
+            <button
+                id="generatePdfBtn"
+                class="btn btn-primary"
+            >
+                <span>📄</span>
+                استخراج PDF
+            </button>
+
+
+            <button
+                id="refreshReportBtn"
+                class="btn btn-secondary"
+                type="button"
+            >
+                <span>↻</span>
+                تحديث التقرير
+            </button>
+
+        </div>
+
+
+        <div class="panel-hint">
+
+            <span>
+                ℹ️
+            </span>
+
+            <p>
+                اختر الطالب والشهر ثم حدد مستوى التقرير
+                لعرض تقرير الطالب مباشرة.
+            </p>
+
+        </div>
+
+    </aside>
+
+
+    <!-- =====================================================
+         منطقة المعاينة
+    ====================================================== -->
+
+    <main class="preview-area">
+
+        <div class="preview-toolbar no-print">
+
+            <div>
+
+                <strong>
+                    معاينة التقرير
+                </strong>
+
+                <span>
+                    A4 • جاهز للطباعة
+                </span>
+
+            </div>
+
+
+            <div
+                class="preview-status"
+                id="previewStatus"
+            >
+                جاهز
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             محتوى PDF
+        ================================================== -->
+
+        <section
+            id="pdfContent"
+            class="pdf-template"
+        >
+
+            <!-- الرأس -->
+
+            <header class="report-header">
+
+                <div class="header-top-line"></div>
+
+
+                <div class="institution">
+
+                    <div class="mosque-mark">
+                        🕌
+                    </div>
+
+                    <div>
+
+                        <h1>
+                            مسجد الخلفاء الراشدين
+                        </h1>
+
+                        <p>
+                            برنامج الحلقات القرآنية والخدمات التعليمية
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="report-heading">
+
+                    <span
+                        class="report-kicker"
+                        id="pdfReportBadge"
+                    >
+                        تقرير أداء الطالب
+                    </span>
+
+
+                    <h2 id="pdfMainTitle">
+                        تقرير الأداء والمتابعة
+                    </h2>
+
+
+                    <p id="pdfReportPeriod">
+                        -
+                    </p>
+
+                </div>
+
+            </header>
+
+
+            <!-- بيانات الطالب -->
+
+            <section class="identity-card">
+
+                <div class="identity-item">
+
+                    <span>
+                        التقرير
+                    </span>
+
+                    <strong id="pdfReportType">
+                        تقرير طالب
+                    </strong>
+
+                </div>
+
+
+                <div class="identity-item">
+
+                    <span>
+                        الطالب
+                    </span>
+
+                    <strong id="pdfStudentName">
+                        -
+                    </strong>
+
+                </div>
+
+
+                <div class="identity-item">
+
+                    <span>
+                        الحلقة
+                    </span>
+
+                    <strong id="pdfHalaqaName">
+                        -
+                    </strong>
+
+                </div>
+
+
+                <div class="identity-item">
+
+                    <span>
+                        الفترة
+                    </span>
+
+                    <strong id="pdfMonth">
+                        -
+                    </strong>
+
+                </div>
+
+            </section>
+
+
+            <!-- =================================================
+                 الإحصائيات الرئيسية
+            ================================================== -->
+
+            <section class="stats-grid">
+
+                <div class="stat-card">
+
+                    <div class="stat-icon attendance">
+                        ✓
+                    </div>
+
+                    <div>
+
+                        <span>
+                            الحضور
+                        </span>
+
+                        <strong id="pdfAttendCount">
+                            0
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-icon absence">
+                        ×
+                    </div>
+
+                    <div>
+
+                        <span>
+                            الغياب
+                        </span>
+
+                        <strong id="pdfAbsentCount">
+                            0
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-icon recitation">
+                        📖
+                    </div>
+
+                    <div>
+
+                        <span>
+                            جلسات التسميع
+                        </span>
+
+                        <strong id="pdfRecitations">
+                            0
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-icon points">
+                        ★
+                    </div>
+
+                    <div>
+
+                        <span>
+                            إجمالي النقاط
+                        </span>
+
+                        <strong id="pdfPoints">
+                            0
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- المؤشرات الإضافية -->
+
+            <section class="metrics-grid">
+
+                <div class="metric-box">
+
+                    <span>
+                        نسبة الحضور
+                    </span>
+
+                    <strong id="pdfAttendanceRate">
+                        0%
+                    </strong>
+
+                    <div class="progress">
+
+                        <div
+                            id="pdfAttendanceProgress"
+                            style="width:0%"
+                        ></div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="metric-box">
+
+                    <span>
+                        متوسط النقاط
+                    </span>
+
+                    <strong id="pdfAveragePoints">
+                        0
+                    </strong>
+
+                </div>
+
+
+                <div class="metric-box">
+
+                    <span>
+                        عدد الطلاب
+                    </span>
+
+                    <strong id="pdfStudentCount">
+                        1
+                    </strong>
+
+                </div>
+
+
+                <div class="metric-box">
+
+                    <span>
+                        إجمالي السجلات
+                    </span>
+
+                    <strong id="pdfRecordsCount">
+                        0
+                    </strong>
+
+                </div>
+
+            </section>
+
+
+            <!-- =================================================
+                 ملخص الحضور
+            ================================================== -->
+
+            <section class="status-section">
+
+                <div class="section-title">
+
+                    <div>
+
+                        <span class="section-number">
+                            01
+                        </span>
+
+                        <h3>
+                            ملخص الحضور والمتابعة
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <div class="status-grid">
+
+                    <div class="status-item present">
+
+                        <span>
+                            حاضر
+                        </span>
+
+                        <strong id="pdfPresentStatus">
+                            0
+                        </strong>
+
+                    </div>
+
+
+                    <div class="status-item absent">
+
+                        <span>
+                            غائب
+                        </span>
+
+                        <strong id="pdfAbsentStatus">
+                            0
+                        </strong>
+
+                    </div>
+
+
+                    <div class="status-item leave">
+
+                        <span>
+                            إجازة
+                        </span>
+
+                        <strong id="pdfLeaveStatus">
+                            0
+                        </strong>
+
+                    </div>
+
+
+                    <div class="status-item permission">
+
+                        <span>
+                            مستأذن
+                        </span>
+
+                        <strong id="pdfPermissionStatus">
+                            0
+                        </strong>
+
+                    </div>
+
+
+                    <div class="status-item review">
+
+                        <span>
+                            مراجعة
+                        </span>
+
+                        <strong id="pdfReviewStatus">
+                            0
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =================================================
+                 ملخص الطالب
+            ================================================== -->
+
+            <section
+                id="studentSummarySection"
+                class="report-section"
+            >
+
+                <div class="section-title">
+
+                    <div>
+
+                        <span class="section-number">
+                            02
+                        </span>
+
+                        <h3>
+                            الملخص التنفيذي
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="pdfSummaryText"
+                    class="executive-summary"
+                >
+                    لا توجد بيانات.
+                </div>
+
+            </section>
+
+
+            <!-- =================================================
+                 السجل التفصيلي
+            ================================================== -->
+
+            <section
+                id="detailedSection"
+                class="report-section"
+                style="display:none;"
+            >
+
+                <div class="section-title">
+
+                    <div>
+
+                        <span class="section-number">
+                            03
+                        </span>
+
+                        <h3 id="detailedTitle">
+                            السجل التفصيلي
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <div class="table-wrapper">
+
+                    <table class="report-table detailed-table">
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    التاريخ
+                                </th>
+
+                                <th>
+                                    الحالة
+                                </th>
+
+                                <th>
+                                    السورة
+                                </th>
+
+                                <th>
+                                    من
+                                </th>
+
+                                <th>
+                                    إلى
+                                </th>
+
+                                <th>
+                                    التقييم
+                                </th>
+
+                                <th>
+                                    النقاط
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="pdfTableBody"></tbody>
+
+                    </table>
+
+                </div>
+
+            </section>
+
+
+            <!-- =================================================
+                 الإنجاز القرآني
+            ================================================== -->
+
+            <section
+                id="achievementSection"
+                class="achievement-section"
+            >
+
+                <div class="section-title">
+
+                    <div>
+
+                        <span class="section-number">
+                            04
+                        </span>
+
+                        <h3>
+                            الإنجاز القرآني
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="pdfAchievement"
+                    class="achievement-content"
+                >
+                    لا توجد بيانات تسميع كافية.
+                </div>
+
+            </section>
+
+
+            <!-- =================================================
+                 الملاحظات
+            ================================================== -->
+
+            <section class="notes-section">
+
+                <div class="section-title">
+
+                    <div>
+
+                        <span class="section-number">
+                            05
+                        </span>
+
+                        <h3>
+                            ملاحظات وتوصيات الإدارة
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="pdfNotesText"
+                    class="notes-content"
+                >
+                    لا توجد ملاحظات.
+                </div>
+
+            </section>
+
+
+            <!-- =================================================
+                 التذييل
+            ================================================== -->
+
+            <footer class="report-footer">
+
+                <div class="signature-box">
+
+                    <span>
+                        مشرف الحلقة
+                    </span>
+
+                    <div class="signature-line"></div>
+
+                </div>
+
+
+                <div class="footer-center">
+
+                    <strong>
+                        مسجد الخلفاء الراشدين
+                    </strong>
+
+                    <span>
+                        تقرير رسمي للمتابعة التعليمية
+                    </span>
+
+                </div>
+
+
+                <div class="signature-box">
+
+                    <span>
+                        ختم المسجد
+                    </span>
+
+                    <div class="stamp-circle">
+                        الختم
+                    </div>
+
+                </div>
+
+            </footer>
+
+
+            <div class="report-bottom-line"></div>
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<script
+    type="module"
+    src="reports.js"
+></script>
+
+</body>
+
+</html>

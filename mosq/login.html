@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تسجيل الدخول</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Tajawal', sans-serif; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at 30% 20%, #065f46 0%, #022c22 100%);
+    }
+    .login-card {
+      background: rgba(255,255,255,0.95);
+      max-width: 400px;
+      width: 100%;
+      padding: 2rem;
+      border-radius: 2rem;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+    .login-card h1 { color: #065f46; margin-bottom: 1rem; }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      font-size: 1rem;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #065f46, #047857);
+      color: white;
+      border: none;
+      border-radius: 1rem;
+      font-size: 1.1rem;
+      cursor: pointer;
+      margin-top: 15px;
+      transition: 0.3s;
+    }
+    button:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(6,95,70,0.4); }
+    .error-msg {
+      color: #dc2626;
+      background: #fee2e2;
+      padding: 10px;
+      border-radius: 0.8rem;
+      margin-top: 12px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <h1>🏛️ مرحباً بك</h1>
+    <p>سجل دخولك للنظام</p>
+    <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" autocomplete="email">
+    <input type="password" id="loginPassword" placeholder="كلمة المرور" autocomplete="current-password">
+    <button id="loginBtn">🚪 دخول إلى النظام</button>
+    <div id="errorMsg" class="error-msg"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC06KKxkehT1uPBT9k-r-d6MmB4RUuVy9Y",
+      authDomain: "mosque-system.firebaseapp.com",
+      projectId: "mosque-system",
+      storageBucket: "mosque-system.firebasestorage.app",
+      messagingSenderId: "905816133159",
+      appId: "1:905816133159:web:3b95d858815f91780e0802"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) window.location.href = 'index.html';
+    });
+
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const errorDiv = document.getElementById('errorMsg');
+      errorDiv.style.display = 'none';
+
+      if (!email || !password) {
+        errorDiv.innerText = '⚠️ الرجاء إدخال البريد وكلمة المرور';
+        errorDiv.style.display = 'block';
+        return;
+      }
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        window.location.href = 'index.html';
+      } catch (error) {
+        let message = 'فشل تسجيل الدخول.';
+        if (error.code === 'auth/user-not-found') message = '❌ لا يوجد حساب بهذا البريد.';
+        else if (error.code === 'auth/wrong-password') message = '❌ كلمة مرور غير صحيحة.';
+        else if (error.code === 'auth/invalid-credential') message = '❌ البريد أو كلمة المرور غير صحيحة.';
+        else if (error.code === 'auth/too-many-requests') message = '🚫 تم تعطيل الحساب مؤقتاً.';
+        errorDiv.innerText = message;
+        errorDiv.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>
